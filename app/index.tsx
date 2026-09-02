@@ -4,7 +4,9 @@ import { ApprovalPortal } from '../src/components/ApprovalPortal';
 import { createHoId } from '../src/domain/workflow';
 import { FieldApp } from '../src/components/FieldApp';
 import { createDemoHandovers } from '../src/services/demo-data';
+import { createMigrationRequiredPlanDataset, createWorkbookPlanDataset } from '../src/services/plans';
 import { createWorkspaceAdapter } from '../src/services/workspace';
+import { isSupabaseConfigured } from '../src/lib/supabase';
 import { HandoverDraft, Site, UserRole, WorkspaceState } from '../src/types';
 
 const INITIAL_ROLE: UserRole = 'field_team';
@@ -27,7 +29,7 @@ export default function App() {
       setReady(true);
     }).catch(() => {
       if (mounted) {
-        setWorkspace({ sites: [], handovers: [], notifications: [], currentRole: INITIAL_ROLE, currentRegion: 'Central', isDemoMode: true });
+        setWorkspace({ sites: [], handovers: [], notifications: [], currentRole: INITIAL_ROLE, currentRegion: 'Central', isDemoMode: true, plan: isSupabaseConfigured ? createMigrationRequiredPlanDataset() : createWorkbookPlanDataset() });
         setReady(true);
       }
     });

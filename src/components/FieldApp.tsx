@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { categoriesForSite, categoryShortLabels, checklistForSite } from '../checklist';
 import { createAuditEvent, validateHandover } from '../domain/workflow';
+import { PlanVsActual } from './PlanVsActual';
 import { HandoverDraft, EvidencePhoto, InspectionItem, ItemAvailability, ItemStatus, Site, SnagSeverity, WorkspaceState } from '../types';
 
 const COLORS = {
@@ -270,6 +271,7 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
           <SummaryCard value={String(submittedRecords.length)} label="Submitted" tone="blue" />
           <SummaryCard value={String(pendingUploads)} label="Pending upload" tone="green" />
         </View>
+        <PlanVsActual plan={workspace.plan} handovers={workspace.handovers} region={workspace.currentRegion || undefined} compact={compact} />
         <View style={styles.contentSplit}>
           <View style={styles.whitePanel}>
             <View style={styles.panelHeader}><View><Text style={styles.panelEyebrow}>RECENT SITES</Text><Text style={styles.panelTitle}>Continue where you left off</Text></View><Pressable onPress={() => setView('sites')}><Text style={styles.linkText}>View all</Text></Pressable></View>
@@ -278,7 +280,7 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
               return <Pressable key={site.id} style={styles.recentSite} onPress={() => latest ? openInspection(latest.id) : setView('sites')}><View style={styles.siteIcon}><Text style={styles.siteIconText}>{site.cowId.slice(-3)}</Text></View><View style={styles.flexOne}><Text style={styles.siteId}>{site.cowId}</Text><Text style={styles.siteName}>{site.siteLabel}</Text><Text style={styles.meta}>{site.region} · {site.city} · {site.siteStatus}</Text></View><Text style={styles.chevron}>›</Text></Pressable>;
             })}
           </View>
-          <View style={styles.noticePanel}><View style={styles.noticeIcon}><Text style={styles.noticeIconText}>i</Text></View><Text style={styles.noticeTitle}>Local draft mode</Text><Text style={styles.noticeText}>Records save on this device while Supabase credentials are unavailable. Development seed captures are visibly labelled and never mixed with production data.</Text><View style={styles.noticeFooter}><View style={styles.statusDot} /><Text style={styles.noticeFooterText}>Ready to capture</Text></View></View>
+          <View style={styles.noticePanel}><View style={styles.noticeIcon}><Text style={styles.noticeIconText}>i</Text></View><Text style={styles.noticeTitle}>{workspace.plan.source === 'migration_required' ? 'Supabase migration required' : workspace.isDemoMode ? 'Local draft mode' : 'Supabase workspace'}</Text><Text style={styles.noticeText}>{workspace.plan.notice}</Text><View style={styles.noticeFooter}><View style={styles.statusDot} /><Text style={styles.noticeFooterText}>{workspace.plan.source === 'supabase' ? 'Plan synced' : 'Plan preview ready'}</Text></View></View>
         </View>
         <View style={styles.workflowStrip}><Text style={styles.workflowLabel}>WORKFLOW</Text><WorkflowStep number="01" label="Field capture" active /><WorkflowStep number="02" label="Region review" /><WorkflowStep number="03" label="PM approval" /><WorkflowStep number="04" label="Locked record" /></View>
         {workspace.isDemoMode && <Pressable style={styles.demoShortcut} onPress={() => { setView('sites'); }}><View><Text style={styles.demoShortcutEyebrow}>DEMO WORKFLOW</Text><Text style={styles.demoShortcutTitle}>Create a record, then approve it in the portal</Text><Text style={styles.demoShortcutText}>Use development capture to fill required evidence in one tap, then switch roles to exercise the full review chain.</Text></View><Text style={styles.demoShortcutArrow}>→</Text></Pressable>}

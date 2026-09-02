@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { SAMPLE_SITES } from '../sample-sites';
+import { createWorkbookPlanDataset, loadPlanDataset } from './plans';
 import { ApprovalRecord, EvidencePhoto, HandoverDraft, InspectionItem, Site, Snag, WorkspaceState } from '../types';
 
 const WORKSPACE_KEY = 'cow-ho:workspace:v2';
@@ -20,7 +21,8 @@ function createSeedWorkspace(): WorkspaceState {
     notifications: [],
     currentRole: 'field_team',
     currentRegion: 'Central',
-    isDemoMode: true
+    isDemoMode: true,
+    plan: createWorkbookPlanDataset()
   };
 }
 
@@ -28,7 +30,8 @@ export class LocalWorkspaceAdapter implements WorkspaceAdapter {
   async load(): Promise<WorkspaceState> {
     const stored = await AsyncStorage.getItem(WORKSPACE_KEY);
     if (!stored) return createSeedWorkspace();
-    return JSON.parse(stored) as WorkspaceState;
+    const parsed = JSON.parse(stored) as Partial<WorkspaceState>;
+    return { ...createSeedWorkspace(), ...parsed, plan: parsed.plan || createWorkbookPlanDataset() } as WorkspaceState;
   }
 
   async save(workspace: WorkspaceState): Promise<void> {
@@ -48,9 +51,10 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
   constructor(private readonly client: SupabaseClient) {}
 
   async load(): Promise<WorkspaceState> {
-    const [{ data: sites, error: sitesError }, { data: handovers, error: handoversError }] = await Promise.all([
+    const [{ data: sites, error: sitesError }, { data: handovers, error: handoversError }, plan] = await Promise.all([
       this.client.from('sites').select('*').order('cow_id'),
-      this.client.from('handovers').select('*, sites(*), inspection_items(*, evidence_photos(*), snags(*)), approvals(*)').order('created_at', { ascending: false })
+      this.client.from('handovers').select('*, sites(*), inspection_items(*, evidence_photos(*), snags(*)), approvals(*)').order('created_at', { ascending: false }),
+      loadPlanDataset(this.client)
     ]);
     if (sitesError) throw sitesError;
     if (handoversError) throw handoversError;
@@ -61,6 +65,7 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
       currentRole: 'viewer',
       currentRegion: '',
       isDemoMode: false,
+      plan,
       lastSyncedAt: new Date().toISOString()
     };
   }
@@ -213,6 +218,7 @@ function mapSnagRow(row: Record<string, unknown>, handoverId: string, hoId: stri
 export function createWorkspaceAdapter(): WorkspaceAdapter {
   return isSupabaseConfigured && supabase ? new SupabaseWorkspaceAdapter(supabase) : new LocalWorkspaceAdapter();
 }
+
 
 export async function saveWorkspace(workspace: WorkspaceState): Promise<void> {
   await createWorkspaceAdapter().save(workspace);

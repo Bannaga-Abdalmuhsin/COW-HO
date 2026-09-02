@@ -56,11 +56,11 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
       this.client.from('handovers').select('*, sites(*), inspection_items(*, evidence_photos(*), snags(*)), approvals(*)').order('created_at', { ascending: false }),
       loadPlanDataset(this.client)
     ]);
-    if (sitesError) throw sitesError;
+    if (sitesError && sitesError.code !== 'PGRST205') throw sitesError;
     if (handoversError && handoversError.code !== 'PGRST205') throw handoversError;
     return {
-      sites: (sites || []).map(mapSiteRow),
-      handovers: handoversError?.code === 'PGRST205' ? [] : (handovers || []).map(mapHandoverRow),
+      sites: sitesError?.code === 'PGRST205' ? [] : (sites || []).map(mapSiteRow),
+      handovers: sitesError?.code === 'PGRST205' || handoversError?.code === 'PGRST205' ? [] : (handovers || []).map(mapHandoverRow),
       notifications: [],
       currentRole: 'viewer',
       currentRegion: '',

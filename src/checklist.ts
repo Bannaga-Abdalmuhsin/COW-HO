@@ -1,0 +1,31 @@
+import { ChecklistDefinition, Site } from './types';
+
+export const CHECKLIST: ChecklistDefinition[] = [
+  { key: 'power_configuration', title: 'Power Configuration', category: 'Power System', requiredPhotos: 1 },
+  { key: 'mdb', title: 'MDB', category: 'Power System', requiredPhotos: 2 },
+  { key: 'rectifier', title: 'Rectifier System', category: 'Power System', requiredPhotos: 2 },
+  { key: 'batteries', title: 'Batteries', category: 'Power System', requiredPhotos: 2 },
+  { key: 'earthing', title: 'Earthing & Grounding', category: 'Power System', requiredPhotos: 2 },
+  { key: 'ac_units', title: 'AC Units', category: 'Cooling & HVAC', requiredPhotos: 2 },
+  { key: 'hvac', title: 'HVAC / PLC Controller', category: 'Cooling & HVAC', requiredPhotos: 1 },
+  { key: 'facp', title: 'Fire Alarm Control Panel', category: 'Fire & Safety', requiredPhotos: 2 },
+  { key: 'fire_cylinders', title: 'Fire Cylinders', category: 'Fire & Safety', requiredPhotos: 1 },
+  { key: 'door_sensor', title: 'Door Sensor', category: 'Fire & Safety', requiredPhotos: 1 },
+  { key: 'lights', title: 'Internal & Security Lights', category: 'Fire & Safety', requiredPhotos: 1 },
+  { key: 'emergency_light', title: 'Emergency Light', category: 'Fire & Safety', requiredPhotos: 1 },
+  { key: 'tower', title: 'Tower Condition', category: 'Tower System', requiredPhotos: 2 },
+  { key: 'tower_motor', title: 'Tower Motor', category: 'Tower System', requiredPhotos: 1 },
+  { key: 'motor_panel', title: 'Motor Control Panel', category: 'Tower System', requiredPhotos: 1 },
+  { key: 'stepdown_transformer', title: 'Tower Motor Step-down Transformer', category: 'Tower System', requiredPhotos: 1 },
+  { key: 'tower_telecom', title: 'Telecom Equipment on Tower', category: 'Tower System', requiredPhotos: 2 },
+  { key: 'civil', title: 'Civil Condition', category: 'Shelter & Civil', requiredPhotos: 3 },
+  { key: 'shelter_key', title: 'Shelter Key', category: 'Shelter & Civil', requiredPhotos: 1 },
+  { key: 'vehicle_key', title: 'Vehicle Key', category: 'Vehicle', requiredPhotos: 1, conditional: 'truck' },
+  { key: 'tires', title: 'Tires Status & Count', category: 'Vehicle', requiredPhotos: 4, conditional: 'truck' }
+];
+
+export const checklistForSite = (site: Site) =>
+  CHECKLIST.filter((item) => item.conditional !== 'truck' || site.hasTruckHead);
+
+export const categoriesForSite = (site: Site) =>
+  [...new Set(checklistForSite(site).map((item) => item.category))];

@@ -25,10 +25,23 @@
       "typedRoutes": true
     },
     "android": {
-      "package": "com.bannaga.cowho"
+      "package": "com.bannaga.cowho",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "ios": {
       "bundleIdentifier": "com.aces.cowhandover"
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "721ae104-fecd-4a2f-9893-f0adc24fa2e6"
+      }
+    },
+    "owner": "bannaga6343"
   }
 }

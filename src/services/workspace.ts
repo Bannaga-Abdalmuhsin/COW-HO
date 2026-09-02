@@ -57,10 +57,10 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
       loadPlanDataset(this.client)
     ]);
     if (sitesError) throw sitesError;
-    if (handoversError) throw handoversError;
+    if (handoversError && handoversError.code !== 'PGRST205') throw handoversError;
     return {
       sites: (sites || []).map(mapSiteRow),
-      handovers: (handovers || []).map(mapHandoverRow),
+      handovers: handoversError?.code === 'PGRST205' ? [] : (handovers || []).map(mapHandoverRow),
       notifications: [],
       currentRole: 'viewer',
       currentRegion: '',

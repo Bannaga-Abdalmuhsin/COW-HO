@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "COW Handover",
+    "slug": "cow-ho-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "cowho",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow COW Handover to capture site evidence."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow COW Handover to record the inspection location."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.aces.cowhandover"
+    },
+    "ios": {
+      "bundleIdentifier": "com.aces.cowhandover"
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { ApprovalPortal } from '../src/components/ApprovalPortal';
+import { createHoId } from '../src/domain/workflow';
 import { FieldApp } from '../src/components/FieldApp';
 import { createDemoHandovers } from '../src/services/demo-data';
 import { createWorkspaceAdapter } from '../src/services/workspace';
@@ -51,8 +52,7 @@ export default function App() {
   function createHandover(site: Site) {
     const existing = currentWorkspace.handovers;
     const now = new Date().toISOString();
-    const sequence = existing.filter((handover) => handover.site.cowId === site.cowId && handover.createdAt.slice(0, 10) === now.slice(0, 10)).length + 1;
-    const hoId = `HO-${site.cowId}-${now.slice(0, 10).replaceAll('-', '')}-${String(sequence).padStart(4, '0')}`;
+    const hoId = createHoId(site.cowId, existing, new Date(now));
     const created = createDemoHandovers([site])[0];
     const blank: HandoverDraft = {
       ...created,

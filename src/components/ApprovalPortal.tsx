@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { categoryShortLabels, checklistForSite } from '../checklist';
-import { canRoleTransition, canTransition, completionPercent, createAuditEvent, STAGE_LABELS, validateHandover } from '../domain/workflow';
+import { canAccessHandover, canRoleTransition, completionPercent, createAuditEvent, STAGE_LABELS, validateHandover } from '../domain/workflow';
 import { ApprovalRecord, HandoverDraft, HandoverStage, SnagSeverity, UserRole, WorkspaceState } from '../types';
 
 const COLORS = {
@@ -49,19 +49,21 @@ export function ApprovalPortal({ workspace, onUpdateHandover, onChangeRole, onCh
   const [snagToUpdate, setSnagToUpdate] = useState<{ handoverId: string; snagId: string } | null>(null);
   const [snagComment, setSnagComment] = useState('');
 
-  const selected = workspace.handovers.find((handover) => handover.id === selectedId) || null;
-  const allSnags = workspace.handovers.flatMap((handover) => Object.values(handover.items).flatMap((item) => item.snags.map((snag) => ({ ...snag, handover }))));
+  const scopedSites = workspace.sites.filter((site) => ['admin', 'project_manager', 'viewer'].includes(workspace.currentRole) || site.region === workspace.currentRegion);
+  const scopedHandovers = workspace.handovers.filter((handover) => canAccessHandover(workspace.currentRole, workspace.currentRegion, handover));
+  const selected = scopedHandovers.find((handover) => handover.id === selectedId) || null;
+  const allSnags = scopedHandovers.flatMap((handover) => Object.values(handover.items).flatMap((item) => item.snags.map((snag) => ({ ...snag, handover }))));
   const metrics = useMemo(() => ({
-    sites: workspace.sites.length,
-    active: workspace.handovers.filter((handover) => !['approved', 'rejected', 'cancelled'].includes(handover.stage)).length,
-    region: workspace.handovers.filter((handover) => ['field_submitted', 'region_review'].includes(handover.stage)).length,
-    pm: workspace.handovers.filter((handover) => ['region_approved', 'pm_review'].includes(handover.stage)).length,
-    approved: workspace.handovers.filter((handover) => handover.stage === 'approved').length,
-    returned: workspace.handovers.filter((handover) => ['returned_to_field', 'returned_to_region', 'rejected'].includes(handover.stage)).length,
+    sites: scopedSites.length,
+    active: scopedHandovers.filter((handover) => !['approved', 'rejected', 'cancelled'].includes(handover.stage)).length,
+    region: scopedHandovers.filter((handover) => ['field_submitted', 'region_review'].includes(handover.stage)).length,
+    pm: scopedHandovers.filter((handover) => ['region_approved', 'pm_review'].includes(handover.stage)).length,
+    approved: scopedHandovers.filter((handover) => handover.stage === 'approved').length,
+    returned: scopedHandovers.filter((handover) => ['returned_to_field', 'returned_to_region', 'rejected'].includes(handover.stage)).length,
     openSnags: allSnags.filter(({ status }) => status !== 'closed').length,
     criticalSnags: allSnags.filter(({ severity, status }) => severity === 'critical' && status !== 'closed').length
-  }), [allSnags, workspace.handovers, workspace.sites.length]);
-  const visibleHandovers = workspace.handovers.filter((handover) => {
+  }), [allSnags, scopedHandovers, scopedSites.length]);
+  const visibleHandovers = scopedHandovers.filter((handover) => {
     const query = search.trim().toLowerCase();
     const matchesQuery = !query || [handover.hoId, handover.site.cowId, handover.site.siteLabel, handover.site.region, handover.fieldEngineer].some((value) => value.toLowerCase().includes(query));
     return matchesQuery && (stageFilter === 'all' || handover.stage === stageFilter);
@@ -201,8 +203,8 @@ export function ApprovalPortal({ workspace, onUpdateHandover, onChangeRole, onCh
   }
 
   function renderReports() {
-    const byRegion = workspace.sites.map((site) => ({ region: site.region, total: workspace.handovers.filter((handover) => handover.site.region === site.region).length })).filter((item, index, items) => items.findIndex((current) => current.region === item.region) === index);
-    return <ScrollView contentContainerStyle={styles.content}><Text style={styles.pageEyebrow}>REPORTING</Text><Text style={styles.pageTitle}>Operational reports</Text><Text style={styles.pageHelper}>Development metrics are calculated from the local workspace and switch to Supabase queries when connected.</Text><View style={styles.reportGrid}><View style={styles.panel}><Text style={styles.panelEyebrow}>STAGE DISTRIBUTION</Text><Text style={styles.panelTitle}>Records by workflow stage</Text>{Object.entries(STAGE_LABELS).map(([stage, label]) => { const count = workspace.handovers.filter((handover) => handover.stage === stage).length; return <View key={stage} style={styles.reportLine}><Text style={styles.reportLineLabel}>{label}</Text><View style={styles.reportBar}><View style={[styles.reportBarFill, { width: `${workspace.handovers.length ? Math.max(4, count / workspace.handovers.length * 100) : 4}%`, backgroundColor: stage === 'approved' ? COLORS.green : stage === 'rejected' ? COLORS.red : COLORS.blue }]} /></View><Text style={styles.reportLineValue}>{count}</Text></View>; })}</View><View style={styles.panel}><Text style={styles.panelEyebrow}>BY REGION</Text><Text style={styles.panelTitle}>Sites and handovers</Text>{byRegion.map((item) => <View key={item.region} style={styles.regionLine}><View style={styles.siteIcon}><Text style={styles.siteIconText}>{item.region.slice(0, 2).toUpperCase()}</Text></View><View style={styles.flexOne}><Text style={styles.regionName}>{item.region}</Text><Text style={styles.meta}>{workspace.sites.filter((site) => site.region === item.region).length} sites in master data</Text></View><Text style={styles.regionCount}>{item.total}</Text></View>)}<View style={styles.reportFooter}><Text style={styles.meta}>Approved PDF generation</Text><Text style={styles.readyTag}>Adapter ready</Text></View></View></View><View style={styles.panel}><View style={styles.panelHeader}><View><Text style={styles.panelEyebrow}>EXPORTS</Text><Text style={styles.panelTitle}>Controlled record outputs</Text></View></View><View style={styles.exportTiles}><ExportTile title="Handover register" detail="CSV · filters preserved" onPress={exportCsv} /><ExportTile title="Snag register" detail="CSV · severity and aging" onPress={() => Alert.alert('Snag export', 'Snag register export is ready in development mode.')} /><ExportTile title="Approved handover PDF" detail="PDF adapter · after approval" onPress={() => Alert.alert('PDF adapter', 'The final PDF adapter is ready for server-side generation after Supabase credentials are supplied.')} /></View></View></ScrollView>;
+    const byRegion = scopedSites.map((site) => ({ region: site.region, total: scopedHandovers.filter((handover) => handover.site.region === site.region).length })).filter((item, index, items) => items.findIndex((current) => current.region === item.region) === index);
+    return <ScrollView contentContainerStyle={styles.content}><Text style={styles.pageEyebrow}>REPORTING</Text><Text style={styles.pageTitle}>Operational reports</Text><Text style={styles.pageHelper}>Development metrics are calculated from the local workspace and switch to Supabase queries when connected.</Text><View style={styles.reportGrid}><View style={styles.panel}><Text style={styles.panelEyebrow}>STAGE DISTRIBUTION</Text><Text style={styles.panelTitle}>Records by workflow stage</Text>{Object.entries(STAGE_LABELS).map(([stage, label]) => { const count = workspace.handovers.filter((handover) => handover.stage === stage).length; return <View key={stage} style={styles.reportLine}><Text style={styles.reportLineLabel}>{label}</Text><View style={styles.reportBar}><View style={[styles.reportBarFill, { width: `${workspace.handovers.length ? Math.max(4, count / workspace.handovers.length * 100) : 4}%`, backgroundColor: stage === 'approved' ? COLORS.green : stage === 'rejected' ? COLORS.red : COLORS.blue }]} /></View><Text style={styles.reportLineValue}>{count}</Text></View>; })}</View><View style={styles.panel}><Text style={styles.panelEyebrow}>BY REGION</Text><Text style={styles.panelTitle}>Sites and handovers</Text>{byRegion.map((item) => <View key={item.region} style={styles.regionLine}><View style={styles.siteIcon}><Text style={styles.siteIconText}>{item.region.slice(0, 2).toUpperCase()}</Text></View><View style={styles.flexOne}><Text style={styles.regionName}>{item.region}</Text><Text style={styles.meta}>{scopedSites.filter((site) => site.region === item.region).length} sites in master data</Text></View><Text style={styles.regionCount}>{item.total}</Text></View>)}<View style={styles.reportFooter}><Text style={styles.meta}>Approved PDF generation</Text><Text style={styles.readyTag}>Adapter ready</Text></View></View></View><View style={styles.panel}><View style={styles.panelHeader}><View><Text style={styles.panelEyebrow}>EXPORTS</Text><Text style={styles.panelTitle}>Controlled record outputs</Text></View></View><View style={styles.exportTiles}><ExportTile title="Handover register" detail="CSV · filters preserved" onPress={exportCsv} /><ExportTile title="Snag register" detail="CSV · severity and aging" onPress={() => Alert.alert('Snag export', 'Snag register export is ready in development mode.')} /><ExportTile title="Approved handover PDF" detail="PDF adapter · after approval" onPress={() => Alert.alert('PDF adapter', 'The final PDF adapter is ready for server-side generation after Supabase credentials are supplied.')} /></View></View></ScrollView>;
   }
 
   function renderAdmin() {

@@ -72,8 +72,9 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
+  const availableSites = workspace.sites.filter((site) => ['admin', 'project_manager', 'viewer'].includes(workspace.currentRole) || site.region === workspace.currentRegion);
   const draft = workspace.handovers.find((handover) => handover.id === activeHandoverId) || null;
-  const filteredSites = workspace.sites.filter((site) =>
+  const filteredSites = availableSites.filter((site) =>
     [site.cowId, site.siteLabel, site.city, site.region, site.vehiclePlate || ''].some((value) => value.toLowerCase().includes(query.trim().toLowerCase()))
   );
   const definitions = draft ? checklistForSite(draft.site) : [];
@@ -272,7 +273,7 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
         <View style={styles.contentSplit}>
           <View style={styles.whitePanel}>
             <View style={styles.panelHeader}><View><Text style={styles.panelEyebrow}>RECENT SITES</Text><Text style={styles.panelTitle}>Continue where you left off</Text></View><Pressable onPress={() => setView('sites')}><Text style={styles.linkText}>View all</Text></Pressable></View>
-            {workspace.sites.map((site) => {
+            {availableSites.map((site) => {
               const latest = workspace.handovers.find((handover) => handover.site.id === site.id);
               return <Pressable key={site.id} style={styles.recentSite} onPress={() => latest ? openInspection(latest.id) : setView('sites')}><View style={styles.siteIcon}><Text style={styles.siteIconText}>{site.cowId.slice(-3)}</Text></View><View style={styles.flexOne}><Text style={styles.siteId}>{site.cowId}</Text><Text style={styles.siteName}>{site.siteLabel}</Text><Text style={styles.meta}>{site.region} · {site.city} · {site.siteStatus}</Text></View><Text style={styles.chevron}>›</Text></Pressable>;
             })}

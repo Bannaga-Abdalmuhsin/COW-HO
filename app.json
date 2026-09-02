@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "COW Handover",
-    "slug": "cow-ho-mobile",
+    "slug": "cow-ho",
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "cowho",
@@ -25,7 +25,7 @@
       "typedRoutes": true
     },
     "android": {
-      "package": "com.aces.cowhandover"
+      "package": "com.bannaga.cowho"
     },
     "ios": {
       "bundleIdentifier": "com.aces.cowhandover"

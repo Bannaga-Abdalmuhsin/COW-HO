@@ -41,7 +41,7 @@ export function canTransition(from: HandoverStage, to: HandoverStage): boolean {
 
 export function canRoleTransition(role: UserRole, from: HandoverStage, to: HandoverStage): boolean {
   if (!canTransition(from, to)) return false;
-  if (role === 'admin') return true;
+  if (role === 'admin') return false;
   if (role === 'field_team') return (from === 'draft' || from === 'returned_to_field') && to === 'field_submitted';
   if (role === 'region_team') {
     return from === 'field_submitted' || from === 'region_review' || from === 'returned_to_region';
@@ -51,7 +51,7 @@ export function canRoleTransition(role: UserRole, from: HandoverStage, to: Hando
 }
 
 export function canAccessHandover(role: UserRole, assignedRegion: string, handover: HandoverDraft): boolean {
-  if (role === 'admin' || role === 'viewer') return true;
+  if (role === 'admin' || role === 'viewer' || role === 'project_manager') return true;
   return handover.site.region === assignedRegion;
 }
 

@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "scheme": "cowho",
     "userInterfaceStyle": "light",
+    "web": {
+      "output": "static"
+    },
     "plugins": [
       "expo-router",
       [

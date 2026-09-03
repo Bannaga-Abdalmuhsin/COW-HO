@@ -103,16 +103,16 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
 
 function mapSiteRow(row: Record<string, unknown>): Site {
   return {
-    id: String(row.id),
+    id: String(row.id || ''),
     cowId: String(row.cow_id || ''),
-    siteLabel: String(row.site_label || ''),
-    region: String(row.region || ''),
+    siteLabel: String(row.site_label || row.location || 'Unnamed site'),
+    region: String(row.region || 'Unassigned region'),
     district: String(row.district || ''),
     city: String(row.city || ''),
     latitude: typeof row.latitude === 'number' ? row.latitude : undefined,
     longitude: typeof row.longitude === 'number' ? row.longitude : undefined,
-    siteStatus: String(row.site_status || ''),
-    vendor: String(row.vendor || ''),
+    siteStatus: String(row.site_status || 'Unknown'),
+    vendor: String(row.vendor || 'Unknown'),
     hasTruckHead: Boolean(row.has_truck_head),
     location: typeof row.location === 'string' ? row.location : undefined,
     sourceData: typeof row.source_data === 'object' && row.source_data ? row.source_data as Record<string, string> : undefined
@@ -120,7 +120,7 @@ function mapSiteRow(row: Record<string, unknown>): Site {
 }
 
 function mapHandoverRow(row: Record<string, unknown>): HandoverDraft {
-  const siteRow = (row.sites || {}) as Record<string, unknown>;
+  const siteRow = row.sites && typeof row.sites === 'object' ? row.sites as Record<string, unknown> : {};
   const site = mapSiteRow(siteRow);
   const handoverId = String(row.id);
   const hoId = String(row.ho_id || '');

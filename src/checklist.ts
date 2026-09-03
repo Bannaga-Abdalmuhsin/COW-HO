@@ -1,5 +1,11 @@
 import { ChecklistDefinition, Site } from './types';
 
+export type ChecklistCapability = 'truck';
+
+export type ChecklistCapabilities = Record<ChecklistCapability, boolean>;
+
+export type ChecklistSite = Partial<Pick<Site, 'hasTruckHead'>> | null | undefined;
+
 export const CHECKLIST: ChecklistDefinition[] = [
   { key: 'power_configuration', title: 'Power Configuration', category: 'Power System', requiredPhotos: 1, helpText: 'Confirm live configuration and SEC connection.' },
   { key: 'mdb', title: 'MDB', category: 'Power System', requiredPhotos: 2, helpText: 'Capture enclosure and nameplate.' },
@@ -25,11 +31,18 @@ export const CHECKLIST: ChecklistDefinition[] = [
   { key: 'tires', title: 'Tires Status & Count', category: 'Vehicle', requiredPhotos: 4, conditional: 'truck' }
 ];
 
-export const checklistForSite = (site: Site) =>
-  CHECKLIST.filter((item) => item.conditional !== 'truck' || site.hasTruckHead);
+export function normalizeChecklistCapabilities(site: ChecklistSite): ChecklistCapabilities {
+  return { truck: site?.hasTruckHead === true };
+}
 
-export const categoriesForSite = (site: Site) =>
-  [...new Set(checklistForSite(site).map((item) => item.category))];
+export function checklistForSite(site: ChecklistSite): ChecklistDefinition[] {
+  const capabilities = normalizeChecklistCapabilities(site);
+  return CHECKLIST.filter((item) => !item.conditional || capabilities[item.conditional]);
+}
+
+export function categoriesForSite(site: ChecklistSite): string[] {
+  return [...new Set(checklistForSite(site).map((item) => item.category))];
+}
 
 export const categoryShortLabels: Record<string, string> = {
   'Power System': 'Power',

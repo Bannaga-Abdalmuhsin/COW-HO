@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { ApprovalPortal } from '../src/components/ApprovalPortal';
 import { createHoId } from '../src/domain/workflow';
 import { FieldApp } from '../src/components/FieldApp';
 import { createDemoHandovers } from '../src/services/demo-data';
@@ -14,7 +13,6 @@ const INITIAL_ROLE: UserRole = 'field_team';
 export default function App() {
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
   const [activeHandoverId, setActiveHandoverId] = useState<string | null>(null);
-  const [experience, setExperience] = useState<'field' | 'portal'>('field');
   const [adapter] = useState(() => createWorkspaceAdapter());
   const [ready, setReady] = useState(false);
 
@@ -75,27 +73,7 @@ export default function App() {
     return blank;
   }
 
-  function changeRole(role: UserRole, region: string) {
-    setWorkspace((current) => current ? { ...current, currentRole: role, currentRegion: region } : current);
-  }
-
-  function toggleExperience() {
-    setExperience((current) => {
-      const next = current === 'field' ? 'portal' : 'field';
-      setWorkspace((existing) => existing ? {
-        ...existing,
-        currentRole: next === 'portal' ? 'region_team' : 'field_team',
-        currentRegion: next === 'portal' ? 'Central' : 'Central'
-      } : existing);
-      return next;
-    });
-  }
-
-  if (experience === 'portal') {
-    return <ApprovalPortal workspace={workspace} onUpdateHandover={updateHandover} onChangeRole={changeRole} onChangeMode={toggleExperience} />;
-  }
-
-  return <FieldApp workspace={workspace} activeHandoverId={activeHandoverId} onSetActiveHandover={setActiveHandoverId} onCreateHandover={createHandover} onUpdateHandover={updateHandover} onChangeMode={toggleExperience} />;
+  return <FieldApp workspace={workspace} activeHandoverId={activeHandoverId} onSetActiveHandover={setActiveHandoverId} onCreateHandover={createHandover} onUpdateHandover={updateHandover} />;
 }
 
 const styles = StyleSheet.create({

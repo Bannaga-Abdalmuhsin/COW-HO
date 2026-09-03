@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 import { SAMPLE_SITES } from '../sample-sites';
+import { createWorkbookPlanDataset, loadPlanDataset } from './plans';
 import { ApprovalRecord, EvidencePhoto, HandoverDraft, InspectionItem, Site, Snag, WorkspaceState } from '../types';
 
 const WORKSPACE_KEY = 'cow-ho:workspace:v2';
@@ -20,7 +21,8 @@ function createSeedWorkspace(): WorkspaceState {
     notifications: [],
     currentRole: 'field_team',
     currentRegion: 'Central',
-    isDemoMode: true
+    isDemoMode: true,
+    plan: createWorkbookPlanDataset()
   };
 }
 
@@ -28,7 +30,8 @@ export class LocalWorkspaceAdapter implements WorkspaceAdapter {
   async load(): Promise<WorkspaceState> {
     const stored = await AsyncStorage.getItem(WORKSPACE_KEY);
     if (!stored) return createSeedWorkspace();
-    return JSON.parse(stored) as WorkspaceState;
+    const parsed = JSON.parse(stored) as Partial<WorkspaceState>;
+    return { ...createSeedWorkspace(), ...parsed, plan: parsed.plan || createWorkbookPlanDataset() } as WorkspaceState;
   }
 
   async save(workspace: WorkspaceState): Promise<void> {
@@ -48,19 +51,21 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
   constructor(private readonly client: SupabaseClient) {}
 
   async load(): Promise<WorkspaceState> {
-    const [{ data: sites, error: sitesError }, { data: handovers, error: handoversError }] = await Promise.all([
+    const [{ data: sites, error: sitesError }, { data: handovers, error: handoversError }, plan] = await Promise.all([
       this.client.from('sites').select('*').order('cow_id'),
-      this.client.from('handovers').select('*, sites(*), inspection_items(*, evidence_photos(*), snags(*)), approvals(*)').order('created_at', { ascending: false })
+      this.client.from('handovers').select('*, sites(*), inspection_items(*, evidence_photos(*), snags(*)), approvals(*)').order('created_at', { ascending: false }),
+      loadPlanDataset(this.client)
     ]);
-    if (sitesError) throw sitesError;
-    if (handoversError) throw handoversError;
+    if (sitesError && sitesError.code !== 'PGRST205') throw sitesError;
+    if (handoversError && handoversError.code !== 'PGRST205') throw handoversError;
     return {
-      sites: (sites || []).map(mapSiteRow),
-      handovers: (handovers || []).map(mapHandoverRow),
+      sites: sitesError?.code === 'PGRST205' ? [] : (sites || []).map(mapSiteRow),
+      handovers: sitesError?.code === 'PGRST205' || handoversError?.code === 'PGRST205' ? [] : (handovers || []).map(mapHandoverRow),
       notifications: [],
       currentRole: 'viewer',
       currentRegion: '',
       isDemoMode: false,
+      plan,
       lastSyncedAt: new Date().toISOString()
     };
   }
@@ -98,16 +103,16 @@ export class SupabaseWorkspaceAdapter implements WorkspaceAdapter {
 
 function mapSiteRow(row: Record<string, unknown>): Site {
   return {
-    id: String(row.id),
+    id: String(row.id || ''),
     cowId: String(row.cow_id || ''),
-    siteLabel: String(row.site_label || ''),
-    region: String(row.region || ''),
+    siteLabel: String(row.site_label || row.location || 'Unnamed site'),
+    region: String(row.region || 'Unassigned region'),
     district: String(row.district || ''),
     city: String(row.city || ''),
     latitude: typeof row.latitude === 'number' ? row.latitude : undefined,
     longitude: typeof row.longitude === 'number' ? row.longitude : undefined,
-    siteStatus: String(row.site_status || ''),
-    vendor: String(row.vendor || ''),
+    siteStatus: String(row.site_status || 'Unknown'),
+    vendor: String(row.vendor || 'Unknown'),
     hasTruckHead: Boolean(row.has_truck_head),
     location: typeof row.location === 'string' ? row.location : undefined,
     sourceData: typeof row.source_data === 'object' && row.source_data ? row.source_data as Record<string, string> : undefined
@@ -115,7 +120,7 @@ function mapSiteRow(row: Record<string, unknown>): Site {
 }
 
 function mapHandoverRow(row: Record<string, unknown>): HandoverDraft {
-  const siteRow = (row.sites || {}) as Record<string, unknown>;
+  const siteRow = row.sites && typeof row.sites === 'object' ? row.sites as Record<string, unknown> : {};
   const site = mapSiteRow(siteRow);
   const handoverId = String(row.id);
   const hoId = String(row.ho_id || '');
@@ -213,6 +218,7 @@ function mapSnagRow(row: Record<string, unknown>, handoverId: string, hoId: stri
 export function createWorkspaceAdapter(): WorkspaceAdapter {
   return isSupabaseConfigured && supabase ? new SupabaseWorkspaceAdapter(supabase) : new LocalWorkspaceAdapter();
 }
+
 
 export async function saveWorkspace(workspace: WorkspaceState): Promise<void> {
   await createWorkspaceAdapter().save(workspace);

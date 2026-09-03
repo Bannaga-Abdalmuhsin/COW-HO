@@ -151,6 +151,40 @@ export type NotificationRecord = {
   read: boolean;
 };
 
+export type PlanSource = 'supabase' | 'workbook' | 'migration_required';
+
+export type HandoverPlan = {
+  id?: string;
+  region: string;
+  area: string;
+  totalPlanned: number;
+  onAirPlanned: number;
+  offAirPlanned: number;
+  scheduledQuantity: number;
+  unallocatedQuantity: number;
+  source: string;
+};
+
+export type HandoverPlanDaily = {
+  id?: string;
+  region: string;
+  area: string;
+  planDate: string;
+  plannedQuantity: number;
+};
+
+export type PlanDataset = {
+  rows: HandoverPlan[];
+  daily: HandoverPlanDaily[];
+  source: PlanSource;
+  notice: string;
+};
+
+export type PlanSummary = HandoverPlan & {
+  actualQuantity: number;
+  variance: number;
+};
+
 export type WorkspaceState = {
   sites: Site[];
   handovers: HandoverDraft[];
@@ -158,6 +192,7 @@ export type WorkspaceState = {
   currentRole: UserRole;
   currentRegion: string;
   isDemoMode: boolean;
+  plan: PlanDataset;
   lastSyncedAt?: string;
 };
 

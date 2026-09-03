@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { categoriesForSite, categoryShortLabels, checklistForSite } from '../checklist';
 import { createAuditEvent, validateHandover } from '../domain/workflow';
+import { FieldPlanSummary } from './FieldPlanSummary';
 import { HandoverDraft, EvidencePhoto, InspectionItem, ItemAvailability, ItemStatus, Site, SnagSeverity, WorkspaceState } from '../types';
 
 const COLORS = {
@@ -56,10 +57,9 @@ type FieldAppProps = {
   onSetActiveHandover: (id: string | null) => void;
   onCreateHandover: (site: Site) => HandoverDraft;
   onUpdateHandover: (id: string, updater: (handover: HandoverDraft) => HandoverDraft) => void;
-  onChangeMode: () => void;
 };
 
-export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onCreateHandover, onUpdateHandover, onChangeMode }: FieldAppProps) {
+export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onCreateHandover, onUpdateHandover }: FieldAppProps) {
   const { width } = useWindowDimensions();
   const compact = width < 760;
   const [view, setView] = useState<'home' | 'sites' | 'inspection'>('home');
@@ -243,8 +243,7 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
         <View style={styles.mobileTopbar}>
           <BrandMark />
           <View style={styles.topbarActions}>
-            <View style={styles.demoPill}><View style={styles.demoDot} /><Text style={styles.demoPillText}>Development mode</Text></View>
-            <Pressable style={styles.modeButton} onPress={onChangeMode}><Text style={styles.modeButtonText}>Approval portal →</Text></Pressable>
+            <View style={styles.demoPill}><View style={styles.demoDot} /><Text style={styles.demoPillText}>Field app</Text></View>
           </View>
         </View>
         <View style={[styles.hero, compact && styles.heroCompact]}>
@@ -270,6 +269,7 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
           <SummaryCard value={String(submittedRecords.length)} label="Submitted" tone="blue" />
           <SummaryCard value={String(pendingUploads)} label="Pending upload" tone="green" />
         </View>
+        <FieldPlanSummary plan={workspace.plan} handovers={workspace.handovers} region={workspace.currentRegion || undefined} />
         <View style={styles.contentSplit}>
           <View style={styles.whitePanel}>
             <View style={styles.panelHeader}><View><Text style={styles.panelEyebrow}>RECENT SITES</Text><Text style={styles.panelTitle}>Continue where you left off</Text></View><Pressable onPress={() => setView('sites')}><Text style={styles.linkText}>View all</Text></Pressable></View>
@@ -278,7 +278,7 @@ export function FieldApp({ workspace, activeHandoverId, onSetActiveHandover, onC
               return <Pressable key={site.id} style={styles.recentSite} onPress={() => latest ? openInspection(latest.id) : setView('sites')}><View style={styles.siteIcon}><Text style={styles.siteIconText}>{site.cowId.slice(-3)}</Text></View><View style={styles.flexOne}><Text style={styles.siteId}>{site.cowId}</Text><Text style={styles.siteName}>{site.siteLabel}</Text><Text style={styles.meta}>{site.region} · {site.city} · {site.siteStatus}</Text></View><Text style={styles.chevron}>›</Text></Pressable>;
             })}
           </View>
-          <View style={styles.noticePanel}><View style={styles.noticeIcon}><Text style={styles.noticeIconText}>i</Text></View><Text style={styles.noticeTitle}>Local draft mode</Text><Text style={styles.noticeText}>Records save on this device while Supabase credentials are unavailable. Development seed captures are visibly labelled and never mixed with production data.</Text><View style={styles.noticeFooter}><View style={styles.statusDot} /><Text style={styles.noticeFooterText}>Ready to capture</Text></View></View>
+          <View style={styles.noticePanel}><View style={styles.noticeIcon}><Text style={styles.noticeIconText}>i</Text></View><Text style={styles.noticeTitle}>{workspace.plan.source === 'migration_required' ? 'Supabase migration required' : workspace.isDemoMode ? 'Local draft mode' : 'Supabase workspace'}</Text><Text style={styles.noticeText}>{workspace.plan.notice}</Text><View style={styles.noticeFooter}><View style={styles.statusDot} /><Text style={styles.noticeFooterText}>{workspace.plan.source === 'supabase' ? 'Plan synced' : 'Plan preview ready'}</Text></View></View>
         </View>
         <View style={styles.workflowStrip}><Text style={styles.workflowLabel}>WORKFLOW</Text><WorkflowStep number="01" label="Field capture" active /><WorkflowStep number="02" label="Region review" /><WorkflowStep number="03" label="PM approval" /><WorkflowStep number="04" label="Locked record" /></View>
         {workspace.isDemoMode && <Pressable style={styles.demoShortcut} onPress={() => { setView('sites'); }}><View><Text style={styles.demoShortcutEyebrow}>DEMO WORKFLOW</Text><Text style={styles.demoShortcutTitle}>Create a record, then approve it in the portal</Text><Text style={styles.demoShortcutText}>Use development capture to fill required evidence in one tap, then switch roles to exercise the full review chain.</Text></View><Text style={styles.demoShortcutArrow}>→</Text></Pressable>}
@@ -336,8 +336,6 @@ const styles = StyleSheet.create({
   demoPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.pale, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 7 },
   demoDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.green },
   demoPillText: { color: COLORS.blue, fontSize: 11, fontWeight: '800' },
-  modeButton: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: COLORS.white },
-  modeButtonText: { color: COLORS.navy, fontSize: 12, fontWeight: '800' },
   hero: { backgroundColor: COLORS.navy, borderRadius: 24, padding: 28, flexDirection: 'row', justifyContent: 'space-between', gap: 24, overflow: 'hidden' },
   heroCompact: { flexDirection: 'column', padding: 22 },
   heroCopyBlock: { flex: 1, maxWidth: 620, gap: 12 },

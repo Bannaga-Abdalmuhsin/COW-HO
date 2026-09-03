@@ -93,6 +93,7 @@ export function createDemoHandover(site: Site, hoId: string, stage: HandoverStag
 }
 
 export function createDemoHandovers(sites: Site[]): HandoverDraft[] {
+  if (sites.length === 0) return [];
   const central = sites.find((site) => site.region === 'Central') || sites[0];
   const west = sites.find((site) => site.region === 'West') || sites[0];
   return [
